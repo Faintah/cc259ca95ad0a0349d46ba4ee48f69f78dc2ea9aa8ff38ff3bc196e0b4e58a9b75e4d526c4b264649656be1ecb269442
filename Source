@@ -1,0 +1,327 @@
+wait(game.Loaded)
+
+local Access = false 
+
+local Database = game:HttpGet("https://raw.githubusercontent.com/Faintah/cc259ca95ad0a0349d46ba4ee48f69f78dc2ea9aa8ff38ff3bc196e0b4e58a9b75e4d526c4b264649656be1ecb269442/main/Keys")
+rconsoleprint("Please enter your key:")
+local Input = rconsoleinput()
+
+local Keys = Database:split(" - ")
+if table.find(Keys, Input) then 
+    Access = true 
+end     
+
+repeat wait() until Access 
+local startTick = tick()
+local LocalPlayer = game.Players.LocalPlayer
+local Focused = nil 
+local Aiming = false 
+local UIS = game:GetService("UserInputService")
+local TS = game:GetService("TweenService")
+local TweenInfo = TweenInfo.new(.6)
+
+local Settings = {
+    Coloring = Color3.fromRGB(252, 126, 0),
+    teamCheck = true,
+    tween = false, 
+    aimbot = true, 
+    esp = true, 
+    visibilityCheck = true, 
+    Distance = 1000,
+    LockKey = Enum.UserInputType.MouseButton2, 
+} 
+
+local Items = {} 
+
+--// making rad circle 
+local Rad = Drawing.new("Circle")
+Rad.Filled = false 
+Rad.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
+Rad.Thickness = 2
+Rad.Radius = 60
+
+
+--// functions 
+
+function parseTargets(table) 
+    local parsed = {} 
+    local CharParts = {}
+
+    for _,x in next, LocalPlayer.Character:GetChildren() do 
+        if x:IsA("BasePart") or x:IsA("Part") then 
+            CharParts[#CharParts+1] = x
+        end 
+    end 
+
+    for i,v in pairs(table) do 
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Head") then 
+
+            local rayCast = Ray.new(LocalPlayer.Character.Head.Position, (v.Character.Head.Position - LocalPlayer.Character.Head.Position).Unit * Settings.Distance)
+            local Visible = workspace:FindPartOnRayWithIgnoreList(rayCast, CharParts)
+            if Visible ~= nil and Visible.Parent then 
+                Visible = game.Players:GetPlayerFromCharacter(Visible.Parent)
+            else
+                Aiming = false 
+                Focused = nil 
+                Visible = nil 
+            end 
+            if Settings.teamCheck == true and v.Team == LocalPlayer.Team or Settings.visibilityCheck == true and Visible == nil then 
+                -- void because u cant use return in a for loop without it breaking :()
+            else 
+                parsed[#parsed+1] = v
+            end 
+        end 
+    end 
+
+    return parsed 
+end 
+
+function getTarget()
+    local closeestDistance = math.huge 
+    local closeestPlayer = nil 
+
+    for i,v in pairs(parseTargets(game.Players:GetPlayers())) do 
+        if v ~= LocalPlayer and v.Character ~= nil and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Head") then 
+            if (v.Character.HumanoidRootPart.CFrame.p - LocalPlayer.Character.HumanoidRootPart.CFrame.p).Magnitude < closeestDistance then 
+                closeestDistance = (v.Character.HumanoidRootPart.CFrame.p - LocalPlayer.Character.HumanoidRootPart.CFrame.p).Magnitude
+                closeestPlayer = v
+            end 
+        end 
+    end      
+
+    return closeestPlayer, closeestDistance 
+end 
+
+
+function CreateEsp(box, line, text, Player)
+    if Settings.esp == true and Player ~= LocalPlayer and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and Player.Character:FindFirstChild("Head") and (Player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude < Settings.Distance then 
+        local Character = Player.Character
+        local Camera = workspace.CurrentCamera
+        local wordView = Camera.worldToViewportPoint
+        local headOffset = Vector3.new(0,.5,0)
+        local legOffset = Vector3.new(0,3,0)
+        local hrpPos, RootVis = wordView(Camera, Player.Character.HumanoidRootPart.Position)
+        local headPos = wordView(Camera, Player.Character.Head.Position + headOffset)
+        local legPosition = wordView(Camera, Player.Character.HumanoidRootPart.Position - legOffset)
+        local _, onScreen = Camera:WorldToScreenPoint(Character.HumanoidRootPart.Position)
+
+        line.From = Vector2.new(Camera.ViewportSize.X / 2 + 300, Camera.ViewportSize.Y - 100 / 2 )
+        line.To = Vector2.new(hrpPos.x - box.Size.x / 2, hrpPos.Y - box.Size.Y / 2)
+
+        box.Size = Vector2.new(1000 / hrpPos.Z, headPos.Y - legPosition.Y)
+        box.Position = Vector2.new(hrpPos.x - box.Size.x / 2, hrpPos.Y - box.Size.Y / 2)
+
+        local textData = {
+            "Name : " .. Player.Name,
+            "[ " .. tostring(math.ceil((Player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)) .. "st ]",
+        } 
+
+        text.Center = false
+        text.Outline = false 
+        text.Text = table.concat(textData, "\n")
+        text.Position = Vector2.new(headPos.x-20, headPos.y+50)
+        text.Transparency = 1 
+        text.Outline = true 
+        text.OutlineColor = Color3.fromRGB(0,0,0)
+        text.Color = Settings.Coloring
+
+        local fuckRoblox = workspace.CurrentCamera:WorldToScreenPoint(LocalPlayer:GetMouse().Hit.p)
+        Rad.Position = Vector2.new(fuckRoblox.x,fuckRoblox.y+35)
+        Rad.Color = Settings.Coloring
+
+        --// this shit bouta get confusinggg
+
+        if not onScreen then 
+            line.Visible = false 
+            text.Visible = false 
+            box.Visible = false
+        else
+            if Player == Focused then 
+                box.Filled = false 
+                text.Size = 25
+                box.Color = Color3.fromRGB(255,0,0)
+                text.Color = Color3.fromRGB(255,0,0)
+                line.Color = Color3.fromRGB(255,0,0)
+                box.Transparency = 1
+            else
+                box.Filled = false 
+                text.Size = 15
+                box.Color = Settings.Coloring
+                text.Color = Settings.Coloring
+                line.Color = Settings.Coloring
+                box.Transparency = 1
+            end 
+            line.Visible = true 
+            text.Visible = true 
+            box.Visible = true
+            Rad.Visible = true 
+        end
+    else -- if character / needed parts are nil 
+        line.Visible = false 
+        text.Visible = false 
+        box.Visible = false
+    end 
+end 
+
+
+function renderShit()
+
+    local Square = Drawing.new("Square")
+    Square.Color = Settings.Coloring
+    Square.Filled = false 
+    Square.Thickness = 2
+    Square.Transparency = 1
+
+    local Line = Drawing.new("Line")
+    Line.Color = Settings.Coloring
+    Line.Thickness = 1.5
+    Line.Transparency = 1
+
+    local Text = Drawing.new("Text")
+    Text.Color = Settings.Coloring
+    Text.Transparency = 1
+    Text.Text = ""
+
+    return Square, Line, Text
+end 
+
+--// adding boxs
+
+game.Players.PlayerAdded:Connect(function(bitch_tit)
+    repeat wait() until bitch_tit.Character ~= nil 
+
+    local s,l,t = renderShit()
+    
+    game:GetService("RunService").Heartbeat:Connect(function()
+        CreateEsp(s,l,t, bitch_tit)
+    end)
+end)
+
+for Count, Player in next, game.Players:GetPlayers() do 
+    local s,l,t = renderShit()
+    
+    game:GetService("RunService").Heartbeat:Connect(function()
+        CreateEsp(s,l,t, Player)
+
+        if not Settings.esp then 
+            Rad.Visible = false
+        end 
+    end)
+end 
+
+--// aimbot 
+
+UIS.InputBegan:Connect(function(input)
+    if input.UserInputType == Settings.LockKey then 
+        Aiming = true
+    end 
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Settings.LockKey then
+        Aiming = false
+        Focused = nil 
+    end 
+end)
+
+--// toggle function 
+
+
+function cPrint(String, Color, newline)
+    local sep = ""
+    if newline == true then 
+        sep = "\n"
+    end     
+
+    if Color then 
+        rconsoleprint("@@"..string.upper(Color).."@@")
+    end  
+    rconsoleprint(String..sep)   
+    rconsoleprint("@@LIGHT_GRAY@@")
+end
+
+function setConsole()
+    rconsoleclear() 
+    rconsolename("No Name Aim | C:"..string.upper(LocalPlayer.Name))
+    
+
+    cPrint([[
+ _  _ _  _   _    
+| \| | \| | /_\   
+| .` | .` |/ _ \  
+|_|\_|_|\_/_/ \_\ 
+---------------------------
+ no name aim 
+---------------------------
+    ]], "green", true)
+
+    cPrint("LOAD_TIME:", "LIGHT_GRAY", false); cPrint(tostring(tick() - startTick), "green", true)
+    cPrint("CLIENT:", "LIGHT_GRAY", false); cPrint(LocalPlayer.Name, "green", true)
+
+    rconsoleprint("\n")
+
+    for Index, Value in next, Settings do 
+        cPrint("-" .. string.upper(tostring(Index)) .. ":", "LIGHT_GRAY", false)
+        if type(Value) == "boolean" and Value == false then 
+            cPrint(tostring(Value), "red", true)
+        else
+            cPrint(tostring(Value), "green", true)
+        end 
+    end 
+    rconsoleprint("\n")
+
+    cPrint("use >toggle to toggle boolean commands. \nuse >color to set the color of esp / boxs via rgb values. \nuse >distance to set the max distance in studs.", "yellow", true)
+    rconsoleprint("\n")
+    cPrint("| awaiting input |", "red", true)
+end 
+
+setConsole()
+
+coroutine.wrap(function()
+    while true do 
+        local Command = rconsoleinput()
+        Command = Command:lower()
+        local Arguments = Command:split(" ")
+
+        if Arguments[1] == ">toggle" then 
+            for i,v in pairs(Settings) do 
+                if tostring(i):lower() == Arguments[2] and type(v) == "boolean" then 
+                    Settings[i] = not Settings[i]
+                    cPrint("Set " .. tostring(i) .. " to " .. tostring(not v), "green", true)
+                    wait(.5)
+                    setConsole()
+                end     
+            end 
+        elseif Arguments[1] == ">distance" then 
+            Settings.Distance = tonumber(Arguments[2])
+            cPrint("Set distance to " .. tostring(Arguments[2]), "green", true)
+            wait(.5)
+            setConsole()
+        elseif Arguments[1] == ">color" then 
+            local newColor = {tonumber(Arguments[2]),tonumber(Arguments[3]),tonumber(Arguments[4])}
+            Settings.Coloring = Color3.fromRGB(newColor[1],newColor[2],newColor[3])
+            cPrint("Set color to " .. unpack(newColor), "green", true)
+            wait(.5)
+            setConsole()
+        end 
+        game:GetService("RunService").Heartbeat:wait() 
+    end 
+end)()
+
+coroutine.wrap(function()
+    while true do
+        if Aiming and Settings.aimbot then 
+            local Target = getTarget()
+            Focused = Target 
+            if Target then 
+                if Settings.tween then 
+                    local Tween = TS:Create(workspace.CurrentCamera, TweenInfo, {CFrame = CFrame.new(workspace.CurrentCamera.CFrame.p, Target.Character:FindFirstChild("Head").Position)})
+                    Tween:Play()
+                else
+                    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.p, Target.Character:FindFirstChild("Head").Position)
+                end  
+            end 
+        end 
+        game:GetService("RunService").Heartbeat:wait() 
+    end
+end)()

@@ -19,7 +19,7 @@ end
 
 repeat 
     rconsoleclear()
-    wait(.10)
+    wait(.50)
     rconsoleprint("Checking Key...")
 until Access 
 
@@ -32,6 +32,7 @@ local Aiming = false
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService") 
 local TweenInfo = TweenInfo.new(.6) --// tween time 
+local Blacklist = {}
 
 local Settings = {
     Coloring = Color3.fromRGB(252, 126, 0), --// color 
@@ -56,33 +57,32 @@ Rad.Radius = 60
 
 --// functions 
 
-function parseTargets(table) 
+function parseTargets(toParse) 
     local parsed = {} 
-    local CharParts = {}
+    local Blacklist = {}
 
-    for _,x in next, LocalPlayer.Character:GetChildren() do 
-        if x:IsA("BasePart") or x:IsA("Part") then 
-            CharParts[#CharParts+1] = x
+    for i,v in pairs(LocalPlayer.Character:GetChildren()) do 
+        if v:IsA("BasePart") then 
+            table.insert(Blacklist, v)
         end 
     end 
 
-    for _,x in next, game.Players:GetPlayers() do 
-        if x.Character then 
-            for __, H in pairs(x.Character:GetChildren()) do 
-                if H:IsA("Accessory") and H:FindFirstChild("Handle") then 
-                    CharParts[#CharParts+1] = H.Handle
+    for i,v in pairs(toParse) do 
+        if v.Character then 
+            for _,x in pairs(v.Character:GetChildren()) do 
+                if x:IsA("Accessory") and x:FindFirstChild("Handle") then 
+                    table.insert(Blacklist, x.Handle)
+                end 
+                if x:IsA("BasePart") and x.Name ~= "Head" then 
+                    table.insert(Blacklist, x)
                 end 
             end 
         end 
     end 
     
-    for i,v in pairs(table) do 
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Head") then 
-
-            local rayCast1 = Ray.new(LocalPlayer.Character.Head.Position, (v.Character:FindFirstChild("HumanoidRootPart").Position - LocalPlayer.Character.Head.Position).Unit * Settings.Distance)
-            local rayCast2 = Ray.new(LocalPlayer.Character.Head.Position, (v.Character:FindFirstChild("Head").Position - LocalPlayer.Character.Head.Position).Unit * Settings.Distance)
-
-            local Visible = workspace:FindPartOnRayWithIgnoreList(rayCast1, CharParts) or workspace:FindPartOnRayWithIgnoreList(rayCast2, CharParts)
+    for i,v in pairs(toParse) do 
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") then 
+            local Visible = workspace:FindPartOnRayWithIgnoreList(Ray.new(LocalPlayer.Character.Head.Position, (v.Character:FindFirstChild("Head").Position - LocalPlayer.Character.Head.Position).Unit * Settings.Distance), Blacklist) 
             if Visible ~= nil and Visible.Parent then 
                 Visible = game.Players:GetPlayerFromCharacter(Visible.Parent)
             else

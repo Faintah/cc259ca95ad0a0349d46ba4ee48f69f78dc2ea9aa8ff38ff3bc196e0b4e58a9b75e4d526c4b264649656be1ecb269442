@@ -42,6 +42,7 @@ local Settings = {
     esp = true, --// esp toggle
     visibilityCheck = true, --// vis
     Distance = 1000, --// Distance 
+    aimAt = "Head", --// what you're aiming at
     LockKey = Enum.UserInputType.MouseButton2,  --// lock key
 } 
 
@@ -81,7 +82,7 @@ function parseTargets(toParse)
     end 
     
     for i,v in pairs(toParse) do 
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") then 
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart")  then 
             local Visible = workspace:FindPartOnRayWithIgnoreList(Ray.new(LocalPlayer.Character.Head.Position, (v.Character:FindFirstChild("Head").Position - LocalPlayer.Character.Head.Position).Unit * Settings.Distance), Blacklist) 
             if Visible ~= nil and Visible.Parent then 
                 Visible = game.Players:GetPlayerFromCharacter(Visible.Parent)
@@ -141,7 +142,7 @@ function CreateEsp(box, line, text, Player) --// updates esp
             "[ " .. tostring(math.ceil((Player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)) .. "st ]",
         } --// text data 
 
-        text.Center = false
+        text.Center = true
         text.Outline = false 
         text.Text = table.concat(textData, "\n")
         text.Position = Vector2.new(headPos.x-20, headPos.y+50)
@@ -149,6 +150,7 @@ function CreateEsp(box, line, text, Player) --// updates esp
         text.Outline = true 
         text.OutlineColor = Color3.fromRGB(0,0,0)
         text.Color = Settings.Coloring
+        Drawing.Fonts = 3
 
         local fuckRoblox = workspace.CurrentCamera:WorldToScreenPoint(LocalPlayer:GetMouse().Hit.p)
         Rad.Position = Vector2.new(fuckRoblox.x,fuckRoblox.y+35)
@@ -299,7 +301,7 @@ function setConsole() --// resets console
     end 
     rconsoleprint("\n")
 
-    cPrint("use >toggle to toggle boolean commands. \nuse >color to set the color of esp / boxs via rgb values. \nuse >distance to set the max distance in studs.", "yellow", true)
+    cPrint("use >toggle to toggle boolean commands. \nuse >color to set the color of esp / boxs via rgb values. \nuse >distance to set the max distance in studs.\nuse >aim to set the body part at which you want to aim at.", "yellow", true)
     rconsoleprint("\n")
     cPrint("| awaiting input |", "red", true)
 end 
@@ -332,6 +334,15 @@ coroutine.wrap(function()
             cPrint("Set color to " .. unpack(newColor), "green", true)
             wait(.5)
             setConsole()
+        elseif Arguments[1] == ">aim" or Arguments[1] == ">a" then 
+            for i,v in pairs(LocalPlayer.Character:GetChildren()) do 
+                if v:IsA("BasePart") and v.Name:lower() == Arguments[2] then 
+                    Settings.aimAt = v.Name
+                end    
+            end 
+            cPrint("Set aim target to " .. Arguments[2], "green", true)
+            wait(.5)
+            setConsole()
         end 
         game:GetService("RunService").Heartbeat:wait() 
     end 
@@ -344,10 +355,10 @@ coroutine.wrap(function()
             Focused = Target 
             if Target then 
                 if Settings.tween then 
-                    local Tween = TS:Create(workspace.CurrentCamera, TweenInfo, {CFrame = CFrame.new(workspace.CurrentCamera.CFrame.p, Target.Character:FindFirstChild("Head").Position)})
+                    local Tween = TS:Create(workspace.CurrentCamera, TweenInfo, {CFrame = CFrame.new(workspace.CurrentCamera.CFrame.p, Target.Character:FindFirstChild(Settings.aimAt).Position)})
                     Tween:Play()
                 else
-                    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.p, Target.Character:FindFirstChild("Head").Position)
+                    workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.p, Target.Character:FindFirstChild(Settings.aimAt).Position)
                 end  
             end 
         end 
